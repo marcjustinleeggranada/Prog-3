@@ -1,0 +1,139 @@
+#include <iostream>
+#include <fstream>
+#include <string>
+using namespace std;
+
+class Student {
+public:
+    int listNumber;
+    string name;
+    string studentNumber;
+    string section;
+    string status;
+    string address;
+    string phoneNumber;
+};
+
+// dito makukuha list numbers
+int getNextListNumber() {
+    ifstream file("students.txt");
+    if (!file) {
+        return 1; // start at 1 if file does not exist
+    }
+
+    string line;
+    int count = 0;
+
+    while (getline(file, line)) {
+        if (line == "-----------------------------") {
+            count++;
+        }
+    }
+
+    file.close();
+    return count + 1;
+}
+
+// add student function
+void addStudent() {
+    Student s;
+    s.listNumber = getNextListNumber();
+
+    cout << "\nAssigned List Number: " << s.listNumber << endl;
+
+    cin.ignore(); 
+
+    cout << "Enter name: ";
+    getline(cin, s.name);
+
+    cout << "Enter student number: ";
+    getline(cin, s.studentNumber);
+
+    cout << "Enter section: ";
+    getline(cin, s.section);
+
+    cout << "Enter status: ";
+    getline(cin, s.status);
+
+    cout << "Enter address: ";
+    getline(cin, s.address);
+
+    cout << "Enter phone number: ";
+    getline(cin, s.phoneNumber);
+
+    ofstream file("students.txt", ios::app);
+    if (!file) {
+        cout << "Error opening file.\n";
+        return;
+    }
+
+    file << "List Number: " << s.listNumber << endl;
+    file << "Name: " << s.name << endl;
+    file << "Student Number: " << s.studentNumber << endl;
+    file << "Section: " << s.section << endl;
+    file << "Status: " << s.status << endl;
+    file << "Address: " << s.address << endl;
+    file << "Phone Number: " << s.phoneNumber << endl;
+    file << "-----------------------------" << endl;
+
+    file.close();
+    cout << "\nStudent added successfully!\n";
+}
+
+// display students sa main function
+void displayStudents() {
+    ifstream file("students.txt");
+    if (!file) {
+        cout << "\nNo students recorded yet.\n";
+        return;
+    }
+
+    cout << "\n--- Current Students ---\n";
+    string line;
+
+    while (getline(file, line)) {
+        cout << line << endl;
+    }
+
+    file.close();
+}
+
+int main() {
+    int choice;
+
+    do {
+        displayStudents();
+
+        cout << "\n--- Student Management System ---\n";
+        cout << "1. Add Student\n";
+        cout << "2. Delete Student (to be implemented)\n";
+        cout << "3. Edit Student (to be implemented)\n";
+        cout << "4. Exit\n";
+        cout << "Enter choice: ";
+
+        cin >> choice;
+
+        switch (choice) {
+            case 1:
+                addStudent();
+                break;
+
+            case 2:
+                cout << "Delete Student not implemented yet.\n";
+                break;
+
+            case 3:
+                cout << "Edit Student not implemented yet.\n";
+                break;
+
+            case 4:
+                cout << "Exiting program...\n";
+                break;
+
+            default:
+                cout << "Invalid choice. Try again.\n";
+        }
+
+    } while (choice != 4);
+
+}
