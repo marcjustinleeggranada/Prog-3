@@ -1,13 +1,11 @@
 #include <iostream>
 #include <fstream>
-#include <string>
+#include <regex>
 #include <vector>
-#include <sstream>
-#include <cstdio>
+#include <string>
 
 using namespace std;
 
-// student class
 class Student {
 public:
     int listNumber;
@@ -19,276 +17,253 @@ public:
     string phoneNumber;
 };
 
-// auto incrementing list num 
-int getNextListNumber() {
-    ifstream file("students.txt");
-    if (!file) return 1;
+const string FILENAME = "students.txt";
 
-    string line;
-    int highest = 0;
+/* ---------- REGEX VALIDATION ---------- */
 
-    while (getline(file, line)) {
-        if (line.find("List Number: ") == 0) {
-            int num;
-            stringstream ss(line.substr(13));
-            ss >> num;
-            if (num > highest) highest = num;
-        }
-    }
-    file.close();
-    return highest + 1;
+bool validateName(const string& name) {
+    return regex_match(name, regex("^[A-Za-z]+( [A-Za-z]+)*$"));
 }
 
-// add student
+bool validateStudentNumber(const string& sn) {
+    return regex_match(sn, regex("^\\d{4}-\\d{5}-[A-Z]{2}-\\d$"));
+}
+
+bool validateSection(const string& section) {
+    return regex_match(section, regex("^[A-Z]{3,4} \\d-\\d$"));
+}
+
+bool validateStatus(const string& status) {
+    return regex_match(status, regex("^(Regular|Irregular)$"));
+}
+
+bool validatePhone(const string& phone) {
+    return regex_match(phone, regex("^(09\\d{9}|\\+63\\d{10})$"));
+}
+
+/* ---------- FILE UTILITIES ---------- */
+
+int getNextListNumber() {
+    ifstream file(FILENAME);
+    int last = 0;
+    string line;
+
+    while (getline(file, line)) {
+        if (line == "---") continue;
+        last = stoi(line);
+        for (int i = 0; i < 6; i++) getline(file, line);
+    }
+    return last + 1;
+}
+
+vector<Student> loadStudents() {
+    vector<Student> students;
+    ifstream file(FILENAME);
+    Student s;
+
+    while (file >> s.listNumber) {
+        file.ignore();
+        getline(file, s.name);
+        getline(file, s.studentNumber);
+        getline(file, s.section);
+        getline(file, s.status);
+        getline(file, s.address);
+        getline(file, s.phoneNumber);
+        file.ignore(3);
+        students.push_back(s);
+    }
+    return students;
+}
+
+void saveStudents(const vector<Student>& students) {
+    ofstream file(FILENAME);
+    for (const auto& s : students) {
+        file << s.listNumber << "\n"
+             << s.name << "\n"
+             << s.studentNumber << "\n"
+             << s.section << "\n"
+             << s.status << "\n"
+             << s.address << "\n"
+             << s.phoneNumber << "\n---\n";
+    }
+}
+
+/* ---------- DISPLAY ---------- */
+
+void displayStudents() {
+    vector<Student> students = loadStudents();
+    if (students.empty()) {
+        cout << "No students found.\n";
+        return;
+    }
+
+    cout << "\n--- CURRENT STUDENTS ---\n";
+    for (const auto& s : students) {
+        cout << s.listNumber << " | "
+             << s.name << " | "
+             << s.studentNumber << " | "
+             << s.section << " | "
+             << s.status << "\n";
+    }
+}
+
+/* ---------- ADD ---------- */
+
 void addStudent() {
     Student s;
     s.listNumber = getNextListNumber();
 
-    cout << "\nAssigned List Number: " << s.listNumber << endl;
-    cin.ignore();
+    do {
+        cout << "Name: ";
+        getline(cin, s.name);
+    } while (!validateName(s.name));
 
-    cout << "Enter name: ";
-    getline(cin, s.name);
+    do {
+        cout << "Student Number: ";
+        getline(cin, s.studentNumber);
+    } while (!validateStudentNumber(s.studentNumber));
 
-    cout << "Enter student number: ";
-    getline(cin, s.studentNumber);
+    do {
+        cout << "Section: ";
+        getline(cin, s.section);
+    } while (!validateSection(s.section));
 
-    cout << "Enter section: ";
-    getline(cin, s.section);
+    do {
+        cout << "Status (Regular/Irregular): ";
+        getline(cin, s.status);
+    } while (!validateStatus(s.status));
 
-    cout << "Enter status: ";
-    getline(cin, s.status);
-
-    cout << "Enter address: ";
+    cout << "Address: ";
     getline(cin, s.address);
 
-    cout << "Enter phone number: ";
-    getline(cin, s.phoneNumber);
+    do {
+        cout << "Phone Number: ";
+        getline(cin, s.phoneNumber);
+    } while (!validatePhone(s.phoneNumber));
 
-    ofstream file("students.txt", ios::app);
-    if (!file) {
-        cout << "Error opening file.\n";
-        return;
-    }
+    ofstream file(FILENAME, ios::app);
+    file << s.listNumber << "\n"
+         << s.name << "\n"
+         << s.studentNumber << "\n"
+         << s.section << "\n"
+         << s.status << "\n"
+         << s.address << "\n"
+         << s.phoneNumber << "\n---\n";
 
-    file << "List Number: " << s.listNumber << endl;
-    file << "Name: " << s.name << endl;
-    file << "Student Number: " << s.studentNumber << endl;
-    file << "Section: " << s.section << endl;
-    file << "Status: " << s.status << endl;
-    file << "Address: " << s.address << endl;
-    file << "Phone Number: " << s.phoneNumber << endl;
-    file << "-----------------------------" << endl;
-
-    file.close();
-    cout << "\nStudent added successfully!\n";
+    cout << "Student added successfully.\n";
 }
 
-// display student
-void displayStudents() {
-    ifstream file("students.txt");
-    if (!file) {
-        cout << "\nNo students recorded yet.\n";
-        return;
-    }
+/* ---------- SEARCH ---------- */
 
-    cout << "\n--- Current Students ---\n";
-    string line;
-    while (getline(file, line)) {
-        cout << line << endl;
-    }
-    file.close();
-}
-
-// delete student
-void deleteStudent() {
-    int listNum;
-    cout << "\nEnter List Number to delete: ";
-    cin >> listNum;
-
-    ifstream file("students.txt");
-    if (!file) {
-        cout << "File not found.\n";
-        return;
-    }
-
-    vector<string> keptLines;
-    string line;
-    bool skip = false;
-
-    string target = "List Number: " + to_string(listNum);
-
-    while (getline(file, line)) {
-        if (line == target) {
-            skip = true;
-            continue;
-        }
-        if (skip && line == "-----------------------------") {
-            skip = false;
-            continue;
-        }
-        if (!skip) keptLines.push_back(line);
-    }
-    file.close();
-
-    ofstream out("students.txt");
-    for (string &l : keptLines) out << l << endl;
-    out.close();
-
-    cout << "\nStudent deleted successfully.\n";
-}
-
-// edit student
-void editStudent() {
-    ifstream file("students.txt");
-    if (!file) {
-        cout << "\nNo students to edit.\n";
-        return;
-    }
-
-    int editNumber;
-    cout << "\nEnter List Number to edit: ";
-    cin >> editNumber;
-    cin.ignore();
-
-    ofstream temp("temp.txt");
-    string line;
-    bool found = false;
-
-    while (getline(file, line)) {
-        if (line.find("List Number: ") == 0) {
-            int number;
-            stringstream ss(line.substr(13));
-            ss >> number;
-
-            string name, studNo, section, status, address, phone;
-            getline(file, name);
-            getline(file, studNo);
-            getline(file, section);
-            getline(file, status);
-            getline(file, address);
-            getline(file, phone);
-            getline(file, line); // separator
-
-            if (number == editNumber) {
-                found = true;
-                char ch;
-                string input;
-
-                do {
-                    cout << "\nEdit Menu\n";
-                    cout << "a. Name\nb. Student Number\nc. Section\nd. Status\ne. Address\nf. Phone Number\ng. Done\n";
-                    cout << "Choice: ";
-                    cin >> ch;
-                    cin.ignore();
-
-                    if (ch == 'a') { cout << "New name: "; getline(cin, input); name = "Name: " + input; }
-                    if (ch == 'b') { cout << "New student number: "; getline(cin, input); studNo = "Student Number: " + input; }
-                    if (ch == 'c') { cout << "New section: "; getline(cin, input); section = "Section: " + input; }
-                    if (ch == 'd') { cout << "New status: "; getline(cin, input); status = "Status: " + input; }
-                    if (ch == 'e') { cout << "New address: "; getline(cin, input); address = "Address: " + input; }
-                    if (ch == 'f') { cout << "New phone number: "; getline(cin, input); phone = "Phone Number: " + input; }
-
-                } while (ch != 'g');
-            }
-
-            temp << "List Number: " << number << endl;
-            temp << name << endl;
-            temp << studNo << endl;
-            temp << section << endl;
-            temp << status << endl;
-            temp << address << endl;
-            temp << phone << endl;
-            temp << "-----------------------------" << endl;
-        }
-    }
-
-    file.close();
-    temp.close();
-
-    remove("students.txt");
-    rename("temp.txt", "students.txt");
-
-    if (found)
-        cout << "\nStudent updated successfully.\n";
-    else
-        cout << "\nStudent not found.\n";
-}
-
-// search student
 void searchStudent() {
-    ifstream file("students.txt");
-    if (!file) {
-        cout << "\nNo students recorded yet.\n";
-        return;
-    }
+    vector<Student> students = loadStudents();
+    string key;
+    cout << "Enter name or student number: ";
+    getline(cin, key);
 
-    int choice;
-    cout << "\nSearch by:\n";
-    cout << "1. Name\n";
-    cout << "2. Student Number\n";
-    cout << "Enter choice: ";
-    cin >> choice;
-    cin.ignore();
-
-    string keyword;
-    cout << "Enter search value: ";
-    getline(cin, keyword);
-
-    string line;
     bool found = false;
-    vector<string> block;
-    bool collect = false;
-
-    while (getline(file, line)) {
-
-        if (choice == 1 && line.find("Name: ") == 0 && line.substr(6) == keyword)
-            collect = found = true;
-
-        if (choice == 2 && line.find("Student Number: ") == 0 && line.substr(16) == keyword)
-            collect = found = true;
-
-        if (collect) block.push_back(line);
-
-        if (collect && line == "-----------------------------") {
-            cout << "\n--- Student Found ---\n";
-            for (string &l : block) cout << l << endl;
-            block.clear();
-            collect = false;
+    for (const auto& s : students) {
+        if (s.name == key || s.studentNumber == key) {
+            cout << "\nFOUND:\n";
+            cout << s.listNumber << "\n"
+                 << s.name << "\n"
+                 << s.studentNumber << "\n"
+                 << s.section << "\n"
+                 << s.status << "\n"
+                 << s.address << "\n"
+                 << s.phoneNumber << "\n";
+            found = true;
         }
     }
 
-    if (!found) cout << "\nStudent not found.\n";
-    file.close();
+    if (!found)
+        cout << "Student not found.\n";
 }
 
-// main
+/* ---------- DELETE ---------- */
+
+void deleteStudent() {
+    vector<Student> students = loadStudents();
+    string sn;
+    cout << "Enter student number to delete: ";
+    getline(cin, sn);
+
+    vector<Student> updated;
+    bool deleted = false;
+
+    for (const auto& s : students) {
+        if (s.studentNumber != sn)
+            updated.push_back(s);
+        else
+            deleted = true;
+    }
+
+    saveStudents(updated);
+    cout << (deleted ? "Student deleted.\n" : "Student not found.\n");
+}
+
+/* ---------- EDIT ---------- */
+
+void editStudent() {
+    vector<Student> students = loadStudents();
+    string sn;
+    cout << "Enter student number to edit: ";
+    getline(cin, sn);
+
+    bool found = false;
+    for (auto& s : students) {
+        if (s.studentNumber == sn) {
+            found = true;
+
+            do {
+                cout << "New Name: ";
+                getline(cin, s.name);
+            } while (!validateName(s.name));
+
+            do {
+                cout << "New Section: ";
+                getline(cin, s.section);
+            } while (!validateSection(s.section));
+
+            do {
+                cout << "New Status: ";
+                getline(cin, s.status);
+            } while (!validateStatus(s.status));
+
+            cout << "New Address: ";
+            getline(cin, s.address);
+
+            do {
+                cout << "New Phone: ";
+                getline(cin, s.phoneNumber);
+            } while (!validatePhone(s.phoneNumber));
+        }
+    }
+
+    saveStudents(students);
+    cout << (found ? "Student updated.\n" : "Student not found.\n");
+}
+
+/* ---------- MAIN ---------- */
+
 int main() {
     int choice;
 
     do {
         displayStudents();
-
-        cout << "\n--- Student Management System ---\n";
-        cout << "1. Add Student\n";
-        cout << "2. Delete Student\n";
-        cout << "3. Edit Student\n";
-        cout << "4. Search Student\n";
-        cout << "5. Exit\n";
-        cout << "Enter choice: ";
-
+        cout << "\n1. Add Student\n2. Delete Student\n3. Edit Student\n4. Search Student\n0. Exit\nChoice: ";
         cin >> choice;
+        cin.ignore();
 
         switch (choice) {
-            case 1: addStudent(); break;
-            case 2: deleteStudent(); break;
-            case 3: editStudent(); break;
-            case 4: searchStudent(); break;
-            case 5: cout << "Exiting program...\n"; break;
-            default: cout << "Invalid choice.\n";
+        case 1: addStudent(); break;
+        case 2: deleteStudent(); break;
+        case 3: editStudent(); break;
+        case 4: searchStudent(); break;
+        case 0: cout << "Exiting...\n"; break;
+        default: cout << "Invalid choice.\n";
         }
-
-    } while (choice != 5);
+    } while (choice != 0);
 
     return 0;
 }
